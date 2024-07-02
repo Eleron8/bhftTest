@@ -1,4 +1,6 @@
 
+# REPORT
+
 
 Main flow to get a snapshot of data and keep it updated looks like this:
 We fetch data via HTTP by GET request

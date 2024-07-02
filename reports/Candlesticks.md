@@ -1,5 +1,5 @@
 
-
+## CANDLESTICKS
 
 
 1. Initial request to get snapshot of candlesticks:

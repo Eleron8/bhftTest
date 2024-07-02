@@ -1,3 +1,5 @@
+## AGGREGATE TRADE LIST
+
 Aggregate trades is a bit different compare to normal trades. Trades that executed at the time, from the same order and with the same price will be aggregated by quantity. 
 
 1. Initial request to get snapshot Aggregate Trades List:
@@ -57,4 +59,5 @@ Aggregate trades is a bit different compare to normal trades. Trades that execut
 
 
 Binance UI box where this data is used:
-![[Pasted image 20240702081819.png]]
+
+![Aggregate Trade List](aggTrades.png)

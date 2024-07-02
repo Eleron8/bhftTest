@@ -1,3 +1,4 @@
+## TRADES
 
 1. Initial request to get snapshot Recent Trades List:
 	- Make HTTP GET request to get initial snapshot of Recent Trades List
