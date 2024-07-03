@@ -136,10 +136,13 @@ func getTradesUpdateCon(ctx context.Context, wg *sync.WaitGroup) (chan TradeEven
 	go func() {
 		defer wg.Done()
 		defer c.Close()
+		defer close(ch)
 		for {
 			select {
 			case <-ctx.Done():
-				close(ch)
+				fmt.Println("get trade update done")
+				// cleanup
+				// close(ch)
 				return
 			default:
 				_, message, err := c.ReadMessage()
@@ -170,7 +173,8 @@ func updateTradeList(ctx context.Context, tradeList *TradeList, ch chan TradeEve
 		for {
 			select {
 			case <-ctx.Done():
-				ticker.Stop()
+
+				fmt.Println("update trade list done")
 				return
 			case v, ok := <-ch:
 				if !ok {
