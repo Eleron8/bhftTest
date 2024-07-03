@@ -98,3 +98,61 @@ Binance UI box where klines are used for chart price
 
 
 P.S. In my implementation of that flow I used `/api/v3/klines` as `api/v3/uiKlines` endpoint mentioned as an endpoint that is specifically adjusted to Binance UI. But the logic is the same.
+
+
+## Confirmation
+
+To confirm that my understanding of the chart price flow is correct, I decided to implement it and show my chart based on klines of `BTCUSDT` symbol that I processed. 
+Then I compared my chart and a chart that is shown at Binance page.
+
+
+To get klines data for `BTCUSDT` I used the same flow that I described above.
+
+- Get an initial snapshot with limit 100 and interval as 1 day.
+```
+GET https://www.binance.com/api/v3/klines?limit=100&symbol=BTCUSDT&interval=1d
+```
+
+- Establish connection and read events from `kline` stream with interval 1 day
+
+`wss://stream.binance.com:9443/ws/btcusdt@kline_1d`
+
+- Use OpenTime as a unique identifier and add event data as a new record if OpenTime is a new, otherwise keep updating the last record.
+
+- Every 5 seconds write data in Postgres database
+
+- Setup Grafana Dashboard for Candlesticks and query data properly to match Candlestick template
+
+Result:
+
+First screenshot shows data from Binance at 2024/05/23. Interval is 1 day
+Second screenshot shows data from my Grafana dashboard at 2024/05/23. Interval is 1 day as well.
+The difference is only rounding, due to simplified implemenation on my side.
+But data and dynamic is the same.
+
+* First screenshot:
+```
+2024/05/23
+Open: 69166.62
+High: 70096.12
+Low: 66312.16
+Close: 67969.65
+```
+
+* Second screenshot:
+```
+2024/05/23
+Open: 69167
+High: 70096
+Low: 66312
+Close: 67970
+```
+
+
+![Binance chart](chartBinance.png)
+
+
+
+
+
+![My Chart](myChart.png)

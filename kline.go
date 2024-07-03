@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -58,6 +59,7 @@ type KlineEvent struct {
 
 type KlineList struct {
 	sync.Mutex
+	Index    int
 	Symbol   string
 	Interval string
 	List     []Kline
@@ -99,6 +101,25 @@ func (kl *KlineList) Update(ke KlineEvent) {
 	}
 }
 
+func (kl *KlineList) GetToInsert() []Kline {
+	kl.Lock()
+	defer kl.Unlock()
+	klines := make([]Kline, len(kl.List)-kl.Index)
+	for i := kl.Index; i < len(kl.List); i++ {
+		if kl.List[i].CloseTime <= kl.List[i].OpenTime {
+			kl.Index = i
+			break
+		}
+		klines[i-kl.Index] = kl.List[i]
+
+	}
+	if kl.Index < len(kl.List) && kl.List[kl.Index].CloseTime > kl.List[kl.Index].OpenTime {
+		kl.Index = len(kl.List)
+	}
+
+	return klines
+}
+
 func NewKlineList(symbol, interval string) *KlineList {
 	return &KlineList{
 		Symbol:   symbol,
@@ -107,19 +128,19 @@ func NewKlineList(symbol, interval string) *KlineList {
 	}
 }
 
-func HandleKlines(ctx context.Context, wg *sync.WaitGroup, ticker *time.Ticker, client *http.Client, limit int) {
+func HandleKlines(ctx context.Context, wg *sync.WaitGroup, ticker *time.Ticker, client *http.Client, limit int, db *sql.DB) {
 	klineList, err := getKlinesdata(client, "BTCUSDT", "1d", limit)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("kline list", klineList)
+	fmt.Println("kline list", klineList, len(klineList.List))
 
 	ch, err := getKlineUpdatesCon(ctx, wg, "btcusdt", "BTCUSDT", "1d")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	updateKlines(ctx, klineList, ch, wg, ticker)
+	updateKlines(ctx, klineList, ch, wg, ticker, db)
 }
 
 func getKlinesdata(client *http.Client, symbol string, interval string, limit int) (*KlineList, error) {
@@ -209,14 +230,19 @@ func getKlineUpdatesCon(ctx context.Context, wg *sync.WaitGroup, smallsymbol, sy
 	return ch, nil
 }
 
-func updateKlines(ctx context.Context, klineList *KlineList, ch chan KlineEvent, wg *sync.WaitGroup, ticker *time.Ticker) {
+func updateKlines(ctx context.Context, klineList *KlineList, ch chan KlineEvent, wg *sync.WaitGroup, ticker *time.Ticker, db *sql.DB) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		for {
 			select {
 			case <-ctx.Done():
+
 				ticker.Stop()
+				if err := cleanKlinesTable(db); err != nil {
+					fmt.Println("clean klines table error:", err)
+				}
+				fmt.Println("kline flow is finished")
 				return
 			case v, ok := <-ch:
 				if !ok {
@@ -226,7 +252,12 @@ func updateKlines(ctx context.Context, klineList *KlineList, ch chan KlineEvent,
 				klineList.Update(v)
 				//fmt.Println("update trade list:", tradeList)
 			case <-ticker.C:
-				fmt.Println(klineList)
+				newklines := klineList.GetToInsert()
+				if err := batchInsertKlines(db, newklines); err != nil {
+					fmt.Println("insert klines error:", err)
+				}
+				//fmt.Println("insert klines:", newklines)
+				// fmt.Println("current kline list", len(klineList.List))
 			}
 		}
 	}()

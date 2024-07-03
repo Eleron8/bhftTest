@@ -144,29 +144,29 @@ func getOrderBook(client *http.Client, limit int) (*OrderBook, error) {
 	return ordbook, nil
 }
 
-func getOrderBookUpdates() {
-	c, _, err := websocket.DefaultDialer.Dial(wsbinance+fmt.Sprintf(wsorderbook, "btcusdt"), nil)
-	if err != nil {
-		log.Fatal("dial:", err)
-		// return nil, err
-	}
+// func getOrderBookUpdates() {
+// 	c, _, err := websocket.DefaultDialer.Dial(wsbinance+fmt.Sprintf(wsorderbook, "btcusdt"), nil)
+// 	if err != nil {
+// 		log.Fatal("dial:", err)
+// 		// return nil, err
+// 	}
 
-	defer c.Close()
+// 	defer c.Close()
 
-	for {
-		_, message, err := c.ReadMessage()
-		if err != nil {
-			log.Println("read:", err)
-			return
-		}
-		var body OrderBookUpdate
-		if err := json.Unmarshal(message, &body); err != nil {
-			log.Println("unmarshal:", err)
-			return
-		}
-		fmt.Println("order book update:", body)
-	}
-}
+// 	for {
+// 		_, message, err := c.ReadMessage()
+// 		if err != nil {
+// 			log.Println("read:", err)
+// 			return
+// 		}
+// 		var body OrderBookUpdate
+// 		if err := json.Unmarshal(message, &body); err != nil {
+// 			log.Println("unmarshal:", err)
+// 			return
+// 		}
+// 		fmt.Println("order book update:", body)
+// 	}
+// }
 
 func getOrderBookUpdatesConc(ctx context.Context, wg *sync.WaitGroup) (chan OrderBookUpdate, error) {
 	ch := make(chan OrderBookUpdate, 10)
@@ -214,6 +214,8 @@ func updateAndPrintOrderBook(ctx context.Context, orderBook *OrderBook, ch chan 
 		for {
 			select {
 			case <-ctx.Done():
+				// ticker.Stop()
+				fmt.Println("update and print order book done")
 				return
 			case v, ok := <-ch:
 				if !ok {
